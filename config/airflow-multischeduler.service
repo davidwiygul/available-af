@@ -1,0 +1,18 @@
+# airflow-scheduler.service
+
+[Unit]
+Description=Heirflow multischeduler daemon
+After=network.target 
+
+
+[Service]
+User=ubuntu
+Type=simple
+ExecStart=/bin/bash -c 'source /home/ubuntu/.profile; cd ~/multischeduler; python3 multischeduler.py'
+Restart=always
+RestartSec=5s
+PrivateTmp=True
+
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+# riak_first
+#!/bin/bash
+
+source provision.config
+
+./riak $1
+sleep 15
+PRIVATE_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
+sed -i "s|^RIAK_PRIVATE.*|RIAK_PRIVATE='$PRIVATE_IP'|" provision.config
+sed -i "s|^RIAK_PUBLIC.*|RIAK_PUBLIC='$1'|" provision.config

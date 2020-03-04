@@ -1,0 +1,5 @@
+# provision_worker_later
+#!/bin/bash
+
+./provision_worker $1
+./riak_later $1

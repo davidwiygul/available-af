@@ -1,0 +1,9 @@
+# provision_worker
+#!/bin/bash
+
+source provision.config
+
+ssh -i $AWS_SSH_KEY ubuntu@$1 sudo apt-get update
+./efs $1
+./airflow $1
+./daemonize worker $1

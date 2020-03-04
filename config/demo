@@ -1,0 +1,18 @@
+# demo
+#!/bin/bash
+
+source provision.config
+
+./efs $1
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    if [ ! -d $EFS_PATH/dags ]; then
+        mkdir $EFS_PATH/dags
+    fi
+
+    exit
+HERE
+
+scp -i $AWS_SSH_KEY ../demo/ml.py ubuntu@$1:$EFS_PATH/dags/
+scp -i $AWS_SSH_KEY ../demo/model_select.py ubuntu@$1:$EFS_PATH/dags/
+scp -i $AWS_SSH_KEY ../demo/riak_python_object_bucket.py ubuntu@$1:$EFS_PATH/dags/

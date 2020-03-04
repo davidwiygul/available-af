@@ -1,0 +1,13 @@
+# daemonize
+#!/bin/bash
+
+source provision.config
+
+cat airflow-$1.service | ssh -i $AWS_SSH_KEY ubuntu@$2 sudo tee /etc/systemd/system/airflow-$1.service
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$2 << HERE
+    sudo systemctl daemon-reload
+    sudo systemctl enable airflow-$1.service
+    sudo systemctl start airflow-$1.service
+    exit
+HERE

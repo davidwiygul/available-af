@@ -1,0 +1,28 @@
+# provision_db
+#!/bin/bash
+
+# deal with make data path
+
+
+source provision.config
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get update
+#    sudo apt-get upgrade -y
+HERE
+
+./postgres $1
+
+declare -A dict=( 
+    [ssh_key]=$AWS_SSH_KEY
+    [db_public_ip]=$1 
+    [database]=$DATABASE 
+    [db_user]=$DB_USER 
+    [db_pwd]=$DB_PWD 
+    ) 
+ 
+for key in ${!dict[@]}; do 
+    value=${dict[$key]} 
+    echo $key, $value 
+    sed -i "s|\(^$key\).*|\1 = $value|" ../heirflow/interface.ini 
+done

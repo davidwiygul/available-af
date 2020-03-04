@@ -1,0 +1,7 @@
+# clear_config 
+#!/bin/bash
+
+sed -i "s|\(^.*=\).*|\1''|" provision.config
+python3 clear_config.py ../heirflow/multischeduler.ini
+python3 clear_config.py ../heirflow/interface.ini
+#(cd ../multischeduler; python3 clear_config.py)

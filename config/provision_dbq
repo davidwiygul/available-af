@@ -1,0 +1,18 @@
+# provision_dbq
+#!/bin/bash
+
+# deal with make data path
+
+
+source provision.config
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get update
+#    sudo apt-get upgrade -y
+HERE
+
+./rabbit $1
+./postgres $1
+./efs $1
+./airflow $1
+./demo $1

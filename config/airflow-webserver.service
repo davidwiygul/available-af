@@ -1,0 +1,18 @@
+# airflow-webserver.service
+
+[Unit]
+Description=Airflow webserver daemon
+After=network.target 
+
+
+[Service]
+User=ubuntu
+Type=simple
+ExecStart=/bin/bash -c 'source /home/ubuntu/.profile; airflow webserver'
+Restart=on-failure
+RestartSec=5s
+PrivateTmp=True
+
+
+[Install]
+WantedBy=multi-user.target

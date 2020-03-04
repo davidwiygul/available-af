@@ -1,0 +1,23 @@
+# rabbit
+# !/bin/bash
+
+source ./provision.config
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get install -y rabbitmq-server
+    sudo rabbitmqctl add_user $QUEUE_USER $QUEUE_PWD
+    sudo rabbitmqctl set_user_tags $QUEUE_USER administrator
+    sudo rabbitmqctl add_vhost $QUEUE_HOST
+    sudo rabbitmqctl set_permissions -p $QUEUE_HOST $QUEUE_USER ".*" ".*" ".*"
+    sudo rabbitmqctl delete_user guest
+
+    sudo rabbitmqctl add_user $NEWS_QUEUE_USER $NEWS_QUEUE_PWD
+    sudo rabbitmqctl add_vhost $NEWS_QUEUE_VHOST
+    sudo rabbitmqctl set_permissions -p $NEWS_QUEUE_VHOST $NEWS_QUEUE_USER ".*" ".*" ".*"
+    
+    exit
+HERE
+
+MQ_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
+
+sed -i "s|^MQ_IP.*|MQ_IP='$MQ_IP'|" provision.config

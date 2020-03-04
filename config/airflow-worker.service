@@ -1,0 +1,18 @@
+# airflow-scheduler.service
+
+[Unit]
+Description=Airflow worker daemon
+After=network.target
+
+
+[Service]
+User=ubuntu
+Type=simple
+ExecStart=/bin/bash -c 'source /home/ubuntu/.profile; airflow worker'
+Restart=on-failure
+RestartSec=5s
+PrivateTmp=True
+
+
+[Install]
+WantedBy=multi-user.target
