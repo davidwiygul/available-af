@@ -10,9 +10,10 @@ import riak
 
 class RiakPythonObjectBucket:
     """docstring"""
+
     def __init__(self,
                  bucket: str,
-                 host = socket.gethostbyname(socket.gethostname())) -> None:
+                 host=socket.gethostbyname(socket.gethostname())) -> None:
         """docstring"""
         client = riak.RiakClient(host=host, pb_port=8087, protocol='pbc')
         self.bucket = client.bucket(bucket)
