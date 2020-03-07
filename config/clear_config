@@ -1,7 +1,12 @@
 # clear_config 
 #!/bin/bash
 
+# clears all config/provision.config values
+# calls clear_config.py to clear all heirflow/interface.ini values
+# calls clear config.py to clear all heirflow/multischeduler.ini values,
+#   except for timing config
+
+
 sed -i "s|\(^.*=\).*|\1''|" provision.config
 python3 clear_config.py ../heirflow/multischeduler.ini
 python3 clear_config.py ../heirflow/interface.ini
-#(cd ../multischeduler; python3 clear_config.py)
