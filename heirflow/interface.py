@@ -1,10 +1,43 @@
 # interface.py
-"""module docstring"""
 
-# want to be able to get status if interface is restarted
-# should probably query db for this (rare event, so minimal load)
+"""Simple monitoring tool for multischedulers.
 
-# absorb ip type into library files
+This program's primary purpose is to receive messages sent by multischedulers
+about multischedulers and to display the information so gleaned about each
+multischeduler. The messages are exchanged via a message queue. Schedulers
+are discovered when messages are sent about them. For each known sheduler
+the program indicates whether or not it is available and, if it is available,
+whether or not it is the leader (the scheduler currently active or on duty)
+and, if it is available but not leading, what scheduler it is following
+(that is acknowleding as the leader).
+The program also supports the following commands.
+
+    update
+        queries database directly to determine and display available
+        multischedulers and leader
+
+    stop [number labeling scheduler, as displayed on terminal]
+        sends command via ssh to stop systemd airflow-multischeduler service
+
+    start [number labeling scheduler, as displayed on terminal]
+        sends command via ssh to start systemd airflow-multischeduler service
+
+    report
+        clears screen and last known status of all known multischedulers
+
+    remove [or] delete [number labeling scheduler]
+        deletes a multischeduler from the reporting list
+        (but does not actually shut down or sever from the cluster this
+        multischeduler, which, if active, may continue to be the subject
+        of reports and so may be added back to the reporting list)
+
+    exit [or] quit [or] quit()
+        exits the program
+
+It might also be useful to implement block and unblock commands, which could
+modify ip tables on the database and queue, but such functionality is not yet
+available (and would require knowledge of the affected multischeduler's private IP address, perhaps most easily obtained via ssh using the public IP address).
+"""
 
 import configparser
 from os import system
@@ -12,19 +45,40 @@ import pickle
 import threading
 from typing import Any, Dict, List, Union
 
-from hfshared import Credentials, Message, QueueHost, StatusUpdate
+from hfshared import Credentials, Database, Message, QueueHost, StatusUpdate
 
 
 News = Union[StatusUpdate, str]
+"""Essential data obtained from a Message (see hfshared module),
+   either a StatusUpdate (see hfshared) or a string representation of the
+   public IP address of a scheduler reported as leader.
+"""
 
 
 class ReportedScheduler:
-    """docstring"""
+    """Representation of a multischeduler as reconstructed from reports.
+
+    The fundamental information captured here is whether or not the scheduler
+    is currently available and what scheduler it is following. This information
+    is initially set and subsequently updated via the update method, based on
+    given News. The report function returns a string summarizing the
+    scheduler's status.
+
+    Attributes:
+        key: An integer to identify, concisely, the multischeduler.
+        ip: A string representation of the multischeduler's public IP address.
+        cluster: A SchedulerCluster (below), to which this scheduler belongs.
+        available: A boolean indicating availability of this scheduler.
+        leading: A boolean indicating whether or not this scheduler is leading.
+    """
 
     def __init__(self, key: int,
                  ip: str,
-                 cluster,
+                 cluster: 'SchedulerCluster',
                  news: News) -> None:
+        """Initializes ReportedScheduler with given key, ip, and cluster,
+           and calls update method on given News news.
+        """
         self.key = key
         self.ip = ip
         self.cluster = cluster
@@ -33,8 +87,12 @@ class ReportedScheduler:
         self.leader: str = None
         self.update(news)
 
-    def update(self, news):
-        """docstring"""
+    def update(self, news) -> None:
+        """Updates status based on given News news.
+
+        The news is either a StatusUpdate or a string; if it is a string,
+        then it is the public IP address of a scheduler reported as leader.
+        """
         if news == StatusUpdate.AVAILABLE:
             self.available = True
         if news == StatusUpdate.UNAVAILABLE:
@@ -43,31 +101,31 @@ class ReportedScheduler:
             self.leader = None
         if news == StatusUpdate.LEADER:
             self.leading = True
-        if isinstance(news, str):
+        if isinstance(news, str):  # in this case the news is the leader's IP
             self.leader = news
 
     def report(self) -> str:
-        """docstring"""
+        """Returns a string summarizing the state of the ReportedScheduler."""
         head = f"Scheduler {self.key} ({self.ip}) is "
         if self.leading:
             tail = "leading."
-            style = "\033[35;1;48m"
+            style = "\033[35;1;48m"  # bold purple with black background
         elif self.available:
             tail = "available"
             if self.leader:
                 leader_key = self.cluster.dict[self.leader].key
                 tail += " and following "
-                tail += "\033[35;1;48m" + f"Scheduler {leader_key}."
+                tail += "\033[35;1;48m" + f"Scheduler {leader_key}."  # purple
             else:
                 tail += "."
-            style = "\033[32;1;48m"
+            style = "\033[32;1;48m"  # bold green with black background
         else:
             tail = "unavailable."
-            style = "\033[31;1;48m"
-        return style + head + tail + "\033[0m"
+            style = "\033[31;1;48m"  # bold red with black background
+        return style + head + tail + "\033[0m"  # revert to default style
 
     def update_key(self, key: int) -> None:
-        """docstring"""
+        """Replaces current key with given value."""
         self.key = key
 
 
@@ -128,13 +186,40 @@ class SchedulerCluster:
 
 class CommandPrompt():
     """docstring"""
-    def __init__(self, schedulers: SchedulerCluster, ssh_key: str) -> None:
+
+    def __init__(self,
+                 schedulers: SchedulerCluster,
+                 ssh_key: str,
+                 database: Database,
+                 db_cred: Credentials) -> None:
         self.schedulers = schedulers
         self.listening = True
         self.ssh_key = ssh_key
-        system('clear')
+        self.db = database
+        self.db_cred = db_cred
+        self.update()
         while self.listening:
             self.process(input())
+
+    def update(self) -> None:
+        self.db.connect(self.db_cred)
+        query = ("SELECT DISTINCT \n"
+                 + "\t ip, birth \n"
+                 + "FROM \n"
+                 + "\t schedulers\n"
+                 + "ORDER BY \n"
+                 + "\t birth \n"
+                 + "ASC")
+        self.db.cur.execute(query)
+        ips_by_rank = [record[0] for record in self.db.cur.fetchall()]
+        self.schedulers.consume(Message(sender=ips_by_rank[0],
+                                        subject=ips_by_rank[0],
+                                        status=StatusUpdate.LEADER))
+        for ip in ips_by_rank[1:]:
+            self.schedulers.consume(Message(sender=ip,
+                                            subject=ip,
+                                            status=StatusUpdate.AVAILABLE))
+        self.schedulers.report()
 
     def process(self, cmd: str) -> None:
         """docstring"""
@@ -148,7 +233,7 @@ class CommandPrompt():
             self.schedulers.report()
 
         elif cmd == 'update':
-            print("Stay tuned: this functionality is coming soon!")
+            self.update()
 
         elif len(parsed) == 2 and self.schedulers.is_valid_key(parsed[1]):
             action, key = parsed
@@ -176,6 +261,7 @@ class CommandPrompt():
 
 class MessageConsumer:
     """docstring"""
+
     def __init__(self,
                  q: QueueHost,
                  credentials: Credentials,
@@ -201,16 +287,20 @@ def main() -> None:
     config = configparser.ConfigParser(inline_comment_prefixes='#')
     config.read('interface.ini')
     q = config['Q']
+    db = config['DB']
     ssh_key = config['SSH']['ssh_key']
 
     q_cred = Credentials(user=q['q_user'], password=q['q_pwd'])
     qvh = QueueHost(host_ip=q['q_public_ip'], vhost=q['q_vhost'])
 
+    database = Database(host_ip=db['db_public_ip'], name=db['database'])
+    db_cred = Credentials(user=db['db_user'], password=db['db_pwd'])
+
     schedulers = SchedulerCluster()
 
     MessageConsumer(qvh, q_cred, schedulers)
 
-    CommandPrompt(schedulers, ssh_key)
+    CommandPrompt(schedulers, ssh_key, database, db_cred)
 
 
 if __name__ == '__main__':
