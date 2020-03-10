@@ -1,30 +1,26 @@
 # multischeduler.py
 
-"""module docstring"""
+"""Script to coordinate Airflow schedulers via a database.
 
-# notes to self
+Intended to be run as a daemon, this script controls an Airflow scheduler
+process on the same machine on which it is run, determining when to activate
+(or in rare cases deactivate) the scheduler for which it's responsible by
+coordinating via a database with identical scripts managing Airflow schedulers
+on other machines.
 
-# make sure subprocess dies when process does
-# make sure we know if subprocess dies
-# monitor subprocess for existence and error messages
-# could check on loop
-# can check if returncode, but not sure how to check for errors
-# don't see timeout option in airflow cfg for scheduler or worker
+The script assumes a Postgres database (though CockroachDB may be supported in
+a future release) containing a table
+Schedulers(ip varchar(15), birth timestamp, latest timestamp),
+and the script will interact with no other tables. For proper functioning this
+database should also house the Airflow metadata store.
 
-# should avoid repeatedly opening and closing rabbitmq connections
-# likewise for postgres?
-# can experiment with login scope
+Secondarily the script sends updates on the status of schedulers to the message
+queue (assumed RabbitMQ and on the same server as the task queue) to be picked
+up by the monitoring script interface.py.
 
-# make sure try except for connections functions properly
-
-# sql injection and string interpolation
-
-# firmer protections against split brain and delayed check in
-# forbidding db and q access; aws force stop (seems unreliable)
-# perhaps a security group modification offers the swiftest protection
-# look into iptables too
-
-# improve error handling, reporting, logging
+Database and message queue connection data, along with certain tunable timing
+parameters, are imported from multischeduler.ini.
+"""
 
 import configparser
 import pickle
