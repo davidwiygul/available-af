@@ -36,7 +36,9 @@ The program also supports the following commands.
 
 It might also be useful to implement block and unblock commands, which could
 modify ip tables on the database and queue, but such functionality is not yet
-available (and would require knowledge of the affected multischeduler's private IP address, perhaps most easily obtained via ssh using the public IP address).
+available (and would require knowledge of the affected multischeduler's
+private IP address, perhaps most easily obtained via ssh using the public IP
+address).
 """
 
 import configparser
@@ -130,14 +132,29 @@ class ReportedScheduler:
 
 
 class SchedulerCluster:
-    """docstring"""
+    """Abstraction of the cluster of schedulers as reported to the interface.
+
+    Attributes:
+        dict: A dictionary with keys the server public IP addresses (as strs)
+              known to the interface and values the corresponding
+              ReportedSchedulers.
+        list: A list whose entries are the ReportedSchedulers in dict, in the
+              order they are reported to the interface (with deletions
+              supported).
+    """
 
     def __init__(self) -> None:
+        """Initializes SchedulerCluster with dict and list both empty."""
         self.dict: Dict[str, ReportedScheduler] = dict()
         self.list: List[ReportedScheduler] = []
 
-    def consume(self, message: Message):
-        """docstring"""
+    def consume(self, message: Message) -> None:
+        """Updates SchedulerCluster in response to given Message.
+
+        Extracts News from given Message and directs each such piece of News
+        to the relevant Scheduler, adding the Scheduler to SchedulerCluster if
+        not already present.
+        """
         recipients: List[str] = [message.subject]
         news: List[News] = [message.status]
         if message.status == StatusUpdate.LEADER:
@@ -155,13 +172,16 @@ class SchedulerCluster:
                 self.dict[recipient].update(news)
 
     def report(self) -> None:
-        """docstring"""
+        """Prints to screen a report on every Scheduler in SchedulerCluster."""
         system('clear')
         for scheduler in self.list:
             print(scheduler.report())
 
     def is_valid_key(self, wannakey: Any) -> bool:
-        """docstring"""
+        """Checks whether given input is a valid key for some scheduler.
+
+        Here a key is a base-1 index for the list attribute.
+        """
         try:
             integrated = int(wannakey)
             return 0 < integrated <= len(self.list)
@@ -169,29 +189,53 @@ class SchedulerCluster:
             return False
 
     def key_to_ip(self, str_key: str) -> str:
-        """docstring"""
+        """Returns the public IP address of scheduler with given key.
+
+           Here key has the same meaning as in the def of is_valid_key above.
+        """
         return self.list[int(str_key) - 1].ip
 
     def remove(self, str_key: str) -> None:
-        """docstring"""
+        """Removes scheduler with given key SchedulerCluster.
+
+        Appropriately updates dict and list attributes.
+        """
         del self.dict[self.key_to_ip(str_key)]
         del self.list[int(str_key) - 1]
         self.update_keys()
 
     def update_keys(self) -> None:
-        """docstring"""
+        """Enforces definition of key.
+
+        Specifically the key attribute of each scheduler in SchedulerCluster is
+        updated to agree with the base-1 index of that scheduler in the list
+        attribute of SchedulerCluster.
+        """
         for index, scheduler in enumerate(self.list):
             scheduler.update_key(index + 1)
 
 
 class CommandPrompt():
-    """docstring"""
+    """Prompt to listen for commands and execute them on given SchedulerCluster.
+
+    The supported commands are described in the module docstring above.
+    Attributes:
+        schedulers: A SchedulerCluster
+        listening: A boolean indicating whether or not the prompt is listening.
+        ssh_key: A string representation of the path to an SSH key by which to
+                 access all schedulers.
+        db: A Database (class defined in hfshared.py)
+        db_cred: Credentials (class defined in hfshared.py) to access db
+    """
 
     def __init__(self,
                  schedulers: SchedulerCluster,
                  ssh_key: str,
                  database: Database,
                  db_cred: Credentials) -> None:
+        """Initializes CommandPrompt() with given SchedulerCluster, ssh key,
+           Database, and Credentials; calls update function; and initiates
+           input loop."""
         self.schedulers = schedulers
         self.listening = True
         self.ssh_key = ssh_key
@@ -202,6 +246,7 @@ class CommandPrompt():
             self.process(input())
 
     def update(self) -> None:
+        """Gets and displays current info on all schedulers by querying db."""
         self.db.connect(self.db_cred)
         query = ("SELECT DISTINCT \n"
                  + "\t ip, birth \n"
@@ -222,7 +267,7 @@ class CommandPrompt():
         self.schedulers.report()
 
     def process(self, cmd: str) -> None:
-        """docstring"""
+        """Parses and responds to text input."""
         parsed = cmd.split()
 
         if cmd in {'exit', 'quit', 'quit()'}:
@@ -252,20 +297,27 @@ class CommandPrompt():
                 self.schedulers.remove(key)
                 self.schedulers.report()
 
-            elif action == 'block':
-                print("Stay tuned: this functionality is coming soon!")
-
         else:
             print("...command not understood...")
 
 
 class MessageConsumer:
-    """docstring"""
+    """Consumer to receive messages from given queue, feed them to given
+       SchedulerCluster, and call for SchedulerCluster report.
+
+    Attributes:
+        cluster: A SchedulerCluster
+    """
 
     def __init__(self,
                  q: QueueHost,
                  credentials: Credentials,
                  cluster: SchedulerCluster):
+        """Initializes MessageConsumer with given cluster; uses given
+        Credentials (class defined in hfshared.py) to establish channel with
+        given QueueHost (class defined in hfshared.py) and sets message
+        consumption callback function to be MessageConsumer class function
+        callback."""
         self.cluster = cluster
         q.connect(credentials)
         q.channel.queue_declare(queue='news')
@@ -277,13 +329,13 @@ class MessageConsumer:
         self.thread.start()
 
     def callback(self, ch, method, properties, body) -> None:
-        """docstring"""
+        """Directs message body to SchedulerCluster cluster and reports."""
         self.cluster.consume(pickle.loads(body))
         self.cluster.report()
 
 
 def main() -> None:
-    """docstring"""
+    """Starts a MessageConsumer and a CommandPrompt."""
     config = configparser.ConfigParser(inline_comment_prefixes='#')
     config.read('interface.ini')
     q = config['Q']
