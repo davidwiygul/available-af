@@ -8,6 +8,19 @@ process on the same machine on which it is run, determining when to activate
 coordinating via a database with identical scripts managing Airflow schedulers
 on other machines.
 
+In brief, each script, acting on behalf of the scheduler
+it controls, registers its birth with the database (recording the time it first
+accesses the database) and subsequently checks in periodically, always
+recording in the database its latest (most recent) check-in time. During a
+check-in it also scans the database to see what other schedulers are
+checking in and how recently they've done so. If a scheduler that has
+previously reported later fails to check in within a prescribed period,
+it is then deemed unavailable. At all times the oldest (that is first to check
+in) scheduler is recognized as the unique leader, or active scheduler, that is
+the only one at that time actually running the Airflow scheduler process; all
+others are simply on standby (with the next eldest availabe scheduler the heir
+apparent).
+
 The script assumes a Postgres database (though CockroachDB may be supported in
 a future release) containing a table
 Schedulers(ip varchar(15), birth timestamp, latest timestamp),
@@ -20,6 +33,15 @@ up by the monitoring script interface.py.
 
 Database and message queue connection data, along with certain tunable timing
 parameters, are imported from multischeduler.ini.
+
+In the current version no action is taken against a scheduler that becomes
+unavailable (though a notification is issued to be read by interface.py); it is
+simply trusted that if that scheduler is later able to access the database then
+it will observe that it is no longer the leader and so stop (if necessary) its
+Airflow scheduler process. A future version may implement some kind of fencing:
+for example the database and queue servers could (like interface.py) subscribe
+to the notification queue and block the IP address of the defunct scheduler
+until it issues some kind of assurance that it is healthy.
 """
 
 import configparser
@@ -45,9 +67,29 @@ from hfshared import (Credentials,
 
 
 class Multischeduler:
-    """Multischeduler class docstring"""
+    """Abstraction of a scheduler as a social being among scheduler peers.
+
+    Attributes:
+        services: a Services (defined in hfshared.py) bundle packaging the
+                  database and queue every Airflow scheduler communicates with
+        credentials: a dict having exactly two entries, with key 'db'
+                     having value the database Credentials (hfshared) and the
+                     other key 'q' having value the queue Credentials
+        timing: a dict having exactly three entires, all time-delta valued:
+                time_between_checkins: how long Multischeduler should wait,
+                                       as measured by its local clock,
+                                       before checking in with the database;
+                grace_period: how long Multischeduler should wait, as measured
+                              by database's clock, before deeming another
+                              Multischeduler unavailable;
+                patience: how long Multischeduler should wait, as measured by
+                          its local clock, before activating its scheduler
+                          should the previous leader have been presumed
+                          unavailable.
+    """
 
     AWS_MD_URL = 'http://169.254.169.254/latest/meta-data/public-ipv4'
+    """AWS metadata URL to get public IP address of Multischeduler's host"""
 
     def __init__(self,
                  services: Services,
