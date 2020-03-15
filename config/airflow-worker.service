@@ -1,4 +1,4 @@
-# airflow-scheduler.service
+# airflow-worker.service
 
 [Unit]
 Description=Airflow worker daemon

@@ -1,4 +1,4 @@
-# airflow-scheduler.service
+# airflow-multischeduler.service
 
 [Unit]
 Description=Heirflow multischeduler daemon
