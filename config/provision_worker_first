@@ -1,5 +1,5 @@
 # provision_worker_first
 #!/bin/bash
 
-./provision_worker $1
 ./riak_first $1
+./provision_worker $1
