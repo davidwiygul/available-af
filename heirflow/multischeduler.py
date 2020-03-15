@@ -71,10 +71,10 @@ class Multischeduler:
 
     Attributes:
         services: a Services (defined in hfshared.py) bundle packaging the
-                  database and queue every Airflow scheduler communicates with
+                  database and queue every Airflow scheduler communicates with.
         credentials: a dict having exactly two entries, with key 'db'
                      having value the database Credentials (hfshared) and the
-                     other key 'q' having value the queue Credentials
+                     other key 'q' having value the queue Credentials.
         timing: a dict having exactly three entires, all time-delta valued:
                 time_between_checkins: how long Multischeduler should wait,
                                        as measured by its local clock,
@@ -86,6 +86,15 @@ class Multischeduler:
                           its local clock, before activating its scheduler
                           should the previous leader have been presumed
                           unavailable.
+        ip: A string representation of Multischeduler's public IP address.
+        birth: A datetime marking Multischeduler's first db check-in, as
+               measured by db's clock.
+        leader: A string representation of the public IP address of the
+                Multischeduler that this Multischeduler recognizes as leader.
+        active: A set containing string representations of IP addresses of
+                all Multischedulers this Multischeduler perceives as available.
+        process: A subprocess.Popen Airflow scheduler process if Multischeduler
+                 is leader; otherwise None.
     """
 
     AWS_MD_URL = 'http://169.254.169.254/latest/meta-data/public-ipv4'
@@ -95,24 +104,24 @@ class Multischeduler:
                  services: Services,
                  credentials: Dict[str, Credentials],
                  timing: Dict[str, timedelta]) -> None:
+        """Initializes Multischeduler and calls reset()."""
         self.services = services
         self.credentials = credentials
         self.timing = timing
         self.ip: str = None
         self.birth: datetime = None
         self.leader: str = None
-        self.active = {self.ip}
+        self.active = {}
         self.process: subprocess.Popen = None
-
         self.set_public_ip()
         self.reset()
 
     def set_public_ip(self) -> None:
-        """docstring"""
+        """Sets ip attribute (using AWS)."""
         self.ip = urllib.request.urlopen(self.AWS_MD_URL).read().decode('utf8')
 
     def reset(self) -> None:
-        """docstring"""
+        """Reinitializes Multischeduler; calls register_birth() and loop()."""
         self.leader = None
         self.active = {self.ip}
         self.process = None
@@ -125,22 +134,21 @@ class Multischeduler:
         self.loop()
 
     def db_connect(self) -> None:
-        """docstring"""
+        """Tries to establish database connection."""
         try:
             self.services.db.connect(self.credentials['db'])
         except psycopg2.OperationalError:
-            self.report(subject=self.ip, status=StatusUpdate.UNAVAILABLE)
             self.on_connection_failure()
 
     def q_connect(self):
-        """docstring"""
+        """Tries to establish queue connection."""
         try:
             self.services.q.connect(self.credentials['q'])
         except pika.exceptions.AMQPConnectionError:
             self.on_connection_failure()
 
     def on_connection_failure(self):
-        """docstring"""
+        """Handles connection failure."""
         if self.is_leader():
             self.relinquish_leadership()
         self.report(subject=self.ip, status=StatusUpdate.UNAVAILABLE)
@@ -148,7 +156,7 @@ class Multischeduler:
         self.reset()
 
     def register_birth(self) -> None:
-        """docstring"""
+        """Registers birth."""
         insert = (f"INSERT INTO schedulers (ip, birth, latest)\n"
                   f"VALUES (\'{self.ip}\', "
                   f"CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)\n"
@@ -159,7 +167,7 @@ class Multischeduler:
         self.report(subject=self.ip, status=StatusUpdate.AVAILABLE)
 
     def loop(self):
-        """docstring"""
+        """Executes all check-in tasks."""
         while True:
             time.sleep(self.timing['time_between_checkins'].total_seconds())
             self.db_connect()
@@ -174,7 +182,7 @@ class Multischeduler:
             self.services.q.disconnect()
 
     def toss_stale(self) -> None:
-        """docstring"""
+        """Purges schedulers table in database of all old records."""
         wait = self.timing['grace_period']
         delete = (f"DELETE FROM schedulers WHERE "
                   f"latest<(CURRENT_TIMESTAMP-'{wait}'::interval)")
@@ -182,14 +190,14 @@ class Multischeduler:
         self.services.db.conn.commit()
 
     def send_news(self) -> None:
-        """docstring"""
+        """Commits a new record to the database's schedulers table."""
         insert = (f"INSERT INTO schedulers (ip, birth, latest)\n"
                   f"VALUES (\'{self.ip}\', '{self.birth}', CURRENT_TIMESTAMP)")
         self.services.db.cur.execute(sql.SQL(insert))
         self.services.db.conn.commit()
 
     def fall_in_line(self) -> None:
-        """docstring"""
+        """Calls update_leader() and responds accordingly."""
         old_leader = self.leader
         was_leader = self.is_leader()
         self.update_leader()
@@ -204,7 +212,7 @@ class Multischeduler:
             self.report(subject=self.leader, status=StatusUpdate.LEADER)
 
     def take_stock(self) -> None:
-        """docstring"""
+        """Calls update_active() and responds accordingly."""
         formerly_active = self.active
         self.update_active()
         if self.ip not in self.active:
@@ -216,7 +224,7 @@ class Multischeduler:
             self.report(subject=scheduler, status=StatusUpdate.UNAVAILABLE)
 
     def update_leader(self) -> None:
-        """docstring"""
+        """Determines the current leader and updates leader attribute."""
         select = ("SELECT x.ip FROM schedulers x\n"
                   "WHERE x.birth=\n"
                   "(SELECT MIN(y.birth) FROM schedulers y)")
@@ -225,14 +233,14 @@ class Multischeduler:
         self.services.db.conn.commit()
 
     def update_active(self) -> None:
-        """docstring"""
+        """Determines all available schedulers and updates active attribute."""
         select = f"SELECT DISTINCT ip from schedulers"
         self.services.db.cur.execute(sql.SQL(select))
         self.active = {record[0] for record
                        in self.services.db.cur.fetchall()}
 
     def accept_leadership(self) -> None:
-        """docstring"""
+        """Launches Airflow scheduler process and calls send_news()."""
         time.sleep(self.timing['patience'])
         self.process = subprocess.Popen(['airflow', 'scheduler'],
                                         stdout=subprocess.DEVNULL,
@@ -240,16 +248,16 @@ class Multischeduler:
         self.send_news()
 
     def relinquish_leadership(self) -> None:
-        """docstring"""
+        """Kills Airflow scheduler process and calls reset()."""
         self.process.send_signal(signal.SIGINT)
         self.reset()
 
     def is_leader(self) -> bool:
-        """docstring"""
+        """Checks whether or not this Multischeduler is the leader."""
         return self.leader and self.leader == self.ip
 
     def report(self, subject, status: StatusUpdate) -> None:
-        """docstring"""
+        """Publishes Message with given attributes to the queue."""
         message = Message(sender=self.ip, subject=subject, status=status)
         self.services.q.channel.basic_publish(exchange='',
                                               routing_key='news',
@@ -258,7 +266,8 @@ class Multischeduler:
 
 
 def main() -> None:
-    """docstring"""
+    """Imports database, queue, and timing data from multischeduler.ini and
+       launches a Multischeduler."""
     # read timing specs and database login info from ini file
     config = configparser.ConfigParser(inline_comment_prefixes='#')
     config.read('multischeduler.ini')
