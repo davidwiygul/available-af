@@ -1,4 +1,4 @@
-# provision_dbq
+# provision_q
 #!/bin/bash
 
 source provision.config
