@@ -3,14 +3,11 @@
 
 source provision.config
 
-ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
-    sudo apt-get update
-#    sudo apt-get upgrade -y
-HERE
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 sudo apt-get update
 
 ./rabbit $1
 
-ssh -i $AWS_SSH_KEY ubuntu@$1 "sudo cat /var/lib/rabbitmq/.erlang.cookie">./.erlang.cookie
+ssh -i $AWS_SSH_KEY ubuntu@$1 "sudo cat $ERLANG_COOKIE_PATH">./.erlang.cookie
 
 declare -A dict=(
     [q_public_ip]=$1
