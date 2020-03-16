@@ -2,11 +2,15 @@
 #!/bin/bash
 
 # clears all config/provision.config values
+# deletes .erlang.cookie
 # calls clear_config.py to clear all heirflow/interface.ini values
 # calls clear config.py to clear all heirflow/multischeduler.ini values,
 #   except for timing config
 
 
 sed -i "s|\(^.*=\).*|\1''|" provision.config
+if [ -f "./.erlang.cookie" ]; then
+    rm .erlang.cookie
+fi
 python3 clear_config.py ../heirflow/multischeduler.ini
 python3 clear_config.py ../heirflow/interface.ini
