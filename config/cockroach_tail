@@ -3,8 +3,11 @@
 
 source ./provision.config
 
+HOSTNAME=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname" | tr -d '[:space:]')
+HOST_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
+
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     cockroach cert create-client root --certs-dir=$COCKROACH_CERTS --ca-key=$COCKROACH_CERTS/ca.key
-    cockroach cert create-node localhost $(hostname) $(hostname -I) --certs-dir=$COCKROACH_CERTS --ca-key=$COCKROACH_CERTS/ca.key
+    cockroach cert create-node localhost $HOSTNAME $HOST_IP --certs-dir=$COCKROACH_CERTS --ca-key=$COCKROACH_CERTS/ca.key
     exit
 HERE
