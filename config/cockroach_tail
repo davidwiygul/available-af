@@ -1,0 +1,10 @@
+# cockroach_tail
+#!/bin/bash
+
+source ./provision.config
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    cockroach cert create-client root --certs-dir=$COCKROACH_CERTS --ca-key=$COCKROACH_CERTS/ca.key
+    cockroach cert create-node localhost $(hostname) $(hostname -I) --certs-dir=$COCKROACH_CERTS --ca-key=$COCKROACH_CERTS/ca.key
+    exit
+HERE
