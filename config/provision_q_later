@@ -1,0 +1,29 @@
+# provision_q_later
+#!/bin/bash
+
+source provision.config
+
+scp -i $AWS_SSH_KEY ./.erlang.cookie ubuntu@$1:/home/ubuntu
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get update
+    sudo apt-get install -y rabbitmq-server
+    sudo rabbitmqctl stop
+    sudo mv $ERLANG_COOKIE_PATH /var/lib/rabbitmq/.erlang.cookie.bak
+    sudo mv ~/.erlang.cookie $ERLANG_COOKIE_PATH
+    sudo chown rabbitmq:rabbitmq $ERLANG_COOKIE_PATH
+    sudo chmod 600 $ERLANG_COOKIE_PATH
+    exit
+HERE
+
+sleep 10
+
+ssh -i $AWS_SSH_KEY ubuntu@$1 sudo systemctl start rabbitmq-server
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo rabbitmqctl stop_app
+    sudo rabbitmqctl join_cluster rabbit@ip-$(echo $MQ_IP | tr '.' '-')
+    sudo rabbitmqctl start_app
+    sudo rabbitmqctl set_policy ha-all "" '{"ha-mode":"exactly", "ha-params":2, "ha-sync-mode":"automatic"}'
+    exit
+HERE
