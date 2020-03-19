@@ -6,8 +6,5 @@ source provision.config
 ./riak $1
 sleep 15
 ssh -i $AWS_SSH_KEY ubuntu@$1 sudo riak-admin cluster join riak@$RIAK_PRIVATE
-ssh -T -i $AWS_SSH_KEY ubuntu@$RIAK_PUBLIC << HERE
-	sudo riak-admin cluster plan
-	sudo riak-admin cluster commit
-	exit
-HERE
+ssh -i $AWS_SSH_KEY ubuntu@$RIAK_PUBLIC sudo riak-admin cluster plan
+ssh -i $AWS_SSH_KEY ubuntu@$RIAK_PUBLIC sudo riak-admin cluster commit
