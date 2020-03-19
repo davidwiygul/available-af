@@ -30,4 +30,4 @@ scp -i $AWS_SSH_KEY ../heirflow/multischeduler.py ubuntu@$1:/home/ubuntu/multisc
 scp -i $AWS_SSH_KEY ../heirflow/multischeduler.ini ubuntu@$1:/home/ubuntu/multischeduler/
 scp -i $AWS_SSH_KEY ../heirflow/hfshared.py ubuntu@$1:/home/ubuntu/multischeduler/
 
-./daemonize multischeduler $1
+./daemonize airflow-multischeduler $1

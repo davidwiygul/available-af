@@ -11,4 +11,4 @@ HERE
 
 ./efs $1
 ./airflow $1
-./daemonize webserver $1
+./daemonize airflow-webserver $1
