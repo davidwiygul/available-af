@@ -21,9 +21,8 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
 	sudo sed -i "s|\(^listener.http.internal = \).*:\(.*\)|\1$PRIVATE_IP:\2|" /etc/riak/riak.conf
         sudo sed -i "s|\(^listener.protobuf.internal = \).*:\(.*\)|\1$PRIVATE_IP:\2|" /etc/riak/riak.conf
 	sudo sed -i "s|\(^storage_backend =\).*|\1 memory|" /etc/riak/riak.conf
-
-	sudo riak start
-
 	exit
 HERE
+
+./daemonize riak $1
 

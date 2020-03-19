@@ -1,0 +1,15 @@
+# riak.service
+
+[Unit]
+Description=Riak service
+After=network.target
+
+
+[Service]
+LimitNOFILE=65536
+LimitMEMLOCK=200000
+Type=simple
+ExecStart=/usr/sbin/riak start
+
+[Install]
+WantedBy=multi-user.target
