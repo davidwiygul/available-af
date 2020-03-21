@@ -19,6 +19,5 @@ declare -A dict=(
  
 for key in ${!dict[@]}; do 
     value=${dict[$key]} 
-    echo $key, $value 
     sed -i "s|\(^$key\).*|\1 = $value|" ../heirflow/interface.ini 
 done
