@@ -7,7 +7,7 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get update
 HERE
 
-./postgres $1
+./postgres_first $1
 
 declare -A dict=( 
     [ssh_key]=$AWS_SSH_KEY
