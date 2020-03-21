@@ -1,11 +1,10 @@
-# provision_db
+# provision_db_first
 #!/bin/bash
 
 source provision.config
 
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get update
-#    sudo apt-get upgrade -y
 HERE
 
 ./postgres $1
