@@ -1,0 +1,69 @@
+# provision_db_later
+#!/bin/bash
+
+source provision.config
+
+PRIVATE_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$DB_PUBLIC << HERE
+    HBA=\$(sudo -u postgres psql -A -t -c "show hba_file;")
+    PGCONF=\$(sudo -u postgres psql -A -t -c "show config_file;")
+
+    sudo -u postgres sed -i '/# IPv4 local connections:/a host\treplication\t$REP_USER\t$PRIVATE_IP/32\t\tmd5' \$HBA
+
+    sudo systemctl reload postgresql
+
+    declare -A dict=(
+        [synchronous_commit]=on
+        [synchronous_standby_names]="'$DB_STANDBY_NAME'"
+        )
+    
+    for key in \${!dict[@]}; do
+        value=\${dict[\$key]}
+        sudo -u postgres sed -i "s|#\(\$key\).*|\1 = \$value|" \$PGCONF
+    done
+
+    sudo systemctl restart postgresql
+
+    exit
+HERE
+
+
+./efs $1
+
+
+ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get update
+    
+    sudo apt-get install -y postgresql
+
+    DATA=\$(sudo -u postgres psql -A -t -c "show data_directory;")
+
+    PGCONF=\$(sudo -u postgres psql -A -t -c "show config_file;")
+    
+    sudo systemctl stop postgresql
+
+    sudo -u postgres mv \$DATA \$DATA.bk
+
+    sudo -u postgres PGPASSWORD=$REP_PWD pg_basebackup -h $DB_IP -U $REP_USER -p 5432 -D \$DATA/ -P -Xs -R
+
+    sudo -u postgres sed -i "\\\$arestore_command = 'cp $DB_ARCHIVE/%f %p'" \$DATA/recovery.conf
+
+    sudo -u postgres sed -i "\\\$aarchive_cleanup_command = 'pg_archivecleanup $DB_ARCHIVE %r'" \$DATA/recovery.conf
+
+    sudo -u postgres sed -i "s|\(primary_conninfo = '\)\(.*\)|\1application_name=$DB_STANDBY_NAME \2|" \$DATA/recovery.conf
+
+    declare -A dict=(
+        [hot_standby]=on
+        [hot_standby_feedback]=on
+        )
+
+    for key in \${!dict[@]}; do
+        value=\${dict[\$key]}
+        sudo -u postgres sed -i "s|#\(\$key\).*|\1 = \$value|" \$PGCONF
+    done
+
+    sudo systemctl start postgresql
+
+    exit
+HERE
