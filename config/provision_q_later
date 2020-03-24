@@ -24,6 +24,6 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo rabbitmqctl stop_app
     sudo rabbitmqctl join_cluster rabbit@ip-$(echo $MQ_IP | tr '.' '-')
     sudo rabbitmqctl start_app
-    sudo rabbitmqctl set_policy ha-all "" '{"ha-mode":"exactly", "ha-params":2, "ha-sync-mode":"automatic"}'
+    sudo rabbitmqctl set_policy -p $QUEUE_HOST ha-all "" '{"ha-mode":"exactly", "ha-params":2, "ha-sync-mode":"automatic"}'
     exit
 HERE
