@@ -52,7 +52,7 @@ class Database:
         host_ip: A string representation of the database server's IP address.
         name: A string storing the database's name.
         conn: A psycopg2 connection object.
-        cur: A pscopg2 cursor object.
+        cur: A psycopg2 cursor object.
     """
 
     def __init__(self, host_ip: str, name: str) -> None:
@@ -83,7 +83,7 @@ class Database:
 class QueueHost:
     """Minimialist abstraction of a message queue connection.
 
-    Presently only Rabbit MQ queues are supported, via pika.
+    Presently only RabbitMQ queues are supported, via pika.
 
     Attributes:
         host: A string representation of the queue server's IP address.
@@ -92,10 +92,10 @@ class QueueHost:
         channel: A pika channel.
     """
 
-    def __init__(self, host_ip, vhost):
+    def __init__(self, host_ip: str, vhost: str):
         """Initializes QueueHost with given vhost name and server IP address."""
-        self.host_ip: str = host_ip
-        self.vhost: str = vhost
+        self.host_ip = host_ip
+        self.vhost = vhost
         self.connection: pika.BlockingConnection = None
         self.channel: pika.channel = None
 
