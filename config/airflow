@@ -4,16 +4,23 @@
 
 source provision.config
 
+
+HEAD="pyamqp://$QUEUE_USER:$QUEUE_PWD@"
+TAIL=":5672/$QUEUE_HOST"
+BROKER_URL=$(echo $MQ_IP | sed "s|^|$HEAD|" | sed "s| |$HEAD|g" | sed "s|$|$TAIL|" | sed "s|,|$TAIL\\\;|g")
+
+echo $BROKER_URL
+
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get install -y python3-pip
 
     python3 -m pip install riak
 
-    python3 -m pip install pipdeptree
+#    python3 -m pip install pipdeptree
 
     python3 -m pip install psycopg2-binary
 
-    python3 -m pip install werkzeug==0.16.0
+#    python3 -m pip install werkzeug==0.16.0
 
     python3 -m pip install apache-airflow[postgres,celery]
 
@@ -25,8 +32,9 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
         [dags_folder]=$EFS_PATH/dags
         [sql_alchemy_conn]=postgresql+psycopg2://$DB_USER:$DB_PWD@$DB_IP/$DATABASE
         [executor]=CeleryExecutor
-        [broker_url]=pyamqp://$QUEUE_USER:$QUEUE_PWD@$MQ_IP:5672/$QUEUE_HOST
+        [broker_url]=$BROKER_URL
         [result_backend]=db+postgresql://$DB_USER:$DB_PWD@$DB_IP/$DATABASE
+        [load_examples]=False
  	#[parallelism]=32
 	#[dag_concurrency]=32
 	#[worker_concurrency]=8

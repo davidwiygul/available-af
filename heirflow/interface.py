@@ -1,5 +1,7 @@
 # interface.py
 
+import pika
+
 """Simple monitoring tool for multischedulers.
 
 This program's primary purpose is to receive messages sent by multischedulers
@@ -41,6 +43,14 @@ modify ip tables on the database and queue, but such functionality is not yet
 available (and would require knowledge of the affected multischeduler's
 private IP address, perhaps most easily obtained via ssh using the public IP
 address).
+
+The current version attempts to maintain a constant connection with a single
+node in the queue cluster, and the program will crash if that node goes down
+(although the multischedulers themselves adapt automatically, so running and
+scheduled DAGs are impervious to the failure of a queue node, provided at least
+a quorum remains online). The interface can simply be restarted (assuming that
+at least one available queue node is listed in interface.py), but a future
+version may eliminate this inconvenience.
 """
 
 import configparser
@@ -328,7 +338,10 @@ class MessageConsumer:
                                 auto_ack=True)
         self.thread = threading.Thread(target=q.channel.start_consuming)
         self.thread.daemon = True
-        self.thread.start()
+        try:
+            self.thread.start()
+        except pika.exceptions.ConnectionClosedByBroker:
+            self.thread.start()
 
     def callback(self, ch, method, properties, body) -> None:
         """Directs message body to SchedulerCluster cluster and reports."""
@@ -345,7 +358,7 @@ def main() -> None:
     ssh_key = config['SSH']['ssh_key']
 
     q_cred = Credentials(user=q['q_user'], password=q['q_pwd'])
-    qvh = QueueHost(host_ip=q['q_public_ip'], vhost=q['q_vhost'])
+    qvh = QueueHost(host_ips=q['q_public_ip'].split(', '), vhost=q['q_vhost'])
 
     database = Database(host_ip=db['db_public_ip'], name=db['database'])
     db_cred = Credentials(user=db['db_user'], password=db['db_pwd'])

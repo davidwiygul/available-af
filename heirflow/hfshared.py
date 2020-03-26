@@ -3,7 +3,8 @@
 """Basic shared HeirFlow datastructures and classes."""
 
 from enum import Enum
-from typing import NamedTuple
+import random
+from typing import List, NamedTuple
 
 import psycopg2
 import pika
@@ -86,29 +87,32 @@ class QueueHost:
     Presently only RabbitMQ queues are supported, via pika.
 
     Attributes:
-        host: A string representation of the queue server's IP address.
+        host_ips: A list of string representations of queue cluster members' IP
+                  addresses.
         vhost: A string storing the name of the queue's virtual host.
         connection: A pika blocking connection object.
         channel: A pika channel.
     """
 
-    def __init__(self, host_ip: str, vhost: str):
+    def __init__(self, host_ips: List[str], vhost: str):
         """Initializes QueueHost with given vhost name and server IP address."""
-        self.host_ip = host_ip
+        self.host_ips = host_ips
         self.vhost = vhost
         self.connection: pika.BlockingConnection = None
         self.channel: pika.channel = None
 
     def connect(self, credentials: Credentials) -> None:
         """Given Credentials, establishes a connection and cursor."""
+        random.shuffle(self.host_ips)
         cred = pika.PlainCredentials(credentials.user,
                                      credentials.password)
-        parameters = pika.ConnectionParameters(host=self.host_ip,
-                                               port=5672,
-                                               virtual_host=self.vhost,
-                                               credentials=cred)
+        parameters_list = [pika.ConnectionParameters(host=host,
+                                                     port=5672,
+                                                     virtual_host=self.vhost,
+                                                     credentials=cred)
+                           for host in self.host_ips]
 
-        self.connection = pika.BlockingConnection(parameters)
+        self.connection = pika.BlockingConnection(parameters_list)
         self.channel = self.connection.channel()
 
     def disconnect(self) -> None:

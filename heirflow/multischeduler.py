@@ -279,7 +279,7 @@ def main() -> None:
     db_cred = Credentials(user=db['db_user'], password=db['db_pwd'])
     q_cred = Credentials(user=q['q_user'], password=q['q_pwd'])
     pgdb = Database(host_ip=db['db_ip'], name=db['database'])
-    qvh = QueueHost(host_ip=q['q_ip'], vhost=q['q_vhost'])
+    qvh = QueueHost(host_ips=q['q_ip'].split(', '), vhost=q['q_vhost'])
     servs = Services(pgdb, qvh)
     creds = {'db': db_cred, 'q': q_cred}
     times = {'grace_period': timing['grace_period'],
