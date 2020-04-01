@@ -51,6 +51,9 @@ scheduled DAGs are impervious to the failure of a queue node, provided at least
 a quorum remains online). The interface can simply be restarted (assuming that
 at least one available queue node is listed in interface.py), but a future
 version may eliminate this inconvenience.
+
+Database failover will also break the interface, which can simply be restarted
+after updating the database public IP in interface.ini.
 """
 
 import configparser
