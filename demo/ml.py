@@ -1,55 +1,80 @@
 # ml.py
-"""docstring"""
+"""Library for data splitting and linear regression with feature selection."""
 
 from typing import List, NamedTuple, Tuple
 import numpy as np
 
+
 class Mask:
-    """docstring"""
+    """Specification of a subset of an ordered set.
+
+    A subset of {1, 2, ..., n} can be specified by an n-bit binary number
+    whose jth bit indicates the inclusion of j in the subset.
+
+    Attributes:
+        full_dim: A nonnegative integer signifying the cardinality of the full
+                  set of which Mask designates a subset.
+        code: A nonnegative integer having binary representation as above.
+        array: If initialized, a boolean (full_dim, ) np.array expressing the
+               binary representation of the code attribute; otherwise None.
+    """
 
     def __init__(self, code: int, full_dim: int) -> None:
-        """docstring"""
+        """Initializes Mask with given full_dim and code."""
         assert 0 <= code < 2**full_dim
         self.full_dim = full_dim
         self.code = code
         self.array = None
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """Returns a string representation of Mask."""
         return f"{self.code} of {2**self.full_dim}"
 
     def complement(self) -> 'Mask':
-        """docstring"""
+        """Returns the Mask representing the set-theoretic complement of the
+           subset represented by this Mask."""
         return Mask(code=2**self.full_dim - 1 - self.code,
                     full_dim=self.full_dim)
 
     def get_array(self) -> np.array:
-        """docstring"""
+        """Returns the binary rep of Mask as a boolean (full_dim, ) np.array."""
         return np.array([(self.code & 2**bit) == 2**bit
                          for bit in range(self.full_dim)])
 
     def save_array(self) -> None:
-        """docstring"""
+        """Stores the binary representation of code as the array attribute."""
         self.array = self.get_array()
 
 
 class LinearPredictor:
-    """docstring"""
+    """A linear regression model.
+
+    Attributes:
+        column_rep: When initialized, a float (d+1, 1) np.array representing
+                    a scalar-valued linear predictor on d features,
+                    with bias entry [0, 0].
+    """
 
     def __init__(self, column_rep: np.array = None) -> None:
-        """docstring"""
+        """Initializes LinearPredictor with column_rep, if given."""
         self.column_rep = column_rep
 
     def __str__(self) -> str:
+        """Returns a string representation of LinearPredictor."""
         return str(self.column_rep)
 
     def predict(self, feature_rows: np.array) -> np.array:
-        """docstring"""
+        """Assuming column_rep has been set to a (d+1, 1) np.array,
+           returns a float (N, 1) np.array whose entries are the predictions
+           corresponding to the given (N, d) data np.array."""
         if self.column_rep is not None:
             return feature_rows@self.column_rep[1:] + self.column_rep[0]
         return None
 
     def fit(self, data: 'LabeledData', mask: Mask = None) -> None:
-        """docstring"""
+        """Sets column_rep to (1, d+1) least-squares predictor for given
+           LabeledData (whose inputs have d features)
+           and using only those features specified by given Mask."""
         if mask is None:
             mask = Mask(code=2**data.feature_dim - 1,
                         full_dim=data.feature_dim)
@@ -63,7 +88,8 @@ class LinearPredictor:
         self.column_rep *= np.concatenate(([[1]], marray))
 
     def error(self, data: 'LabeledData') -> float:
-        """docstring"""
+        """Assuming column_rep has been set, returns error LinearPredictor
+           makes on given LabeledData, normalized by size of input."""
         if self.column_rep is not None:
             return np.linalg.norm(np.linalg.norm(self.predict(data.X) - data.y,
                                                  axis=1)
@@ -72,9 +98,17 @@ class LinearPredictor:
 
 
 class LabeledData:
-    """docstring"""
+    """Collection of feature vectors along with corresponding labels.
+
+    Attributes:
+        X: A float (N, d) np.array representing N feature vectors.
+        y: A float (N, 1) np.array representing N labels corresponding to X.
+        size: An int (N), the number of feature vectors (and also labels).
+        feature_dim: An int (d), the number of features in each input datum.
+    """
 
     def __init__(self, X: np.array, y: np.array) -> None:
+        """Initializes all attributes, given X and y."""
         assert X.shape[0] == y.shape[0]
         self.X = X
         self.y = y
@@ -82,7 +116,9 @@ class LabeledData:
         self.feature_dim = X.shape[1]
 
     def frac_split(self, frac: float) -> Tuple['LabeledData', 'LabeledData']:
-        """docstring"""
+        """Returns tuple of LabeledData randomly partitioning this LabeledData
+           so that the first LabeledData has size (approximately) given fraction
+           of this LabeledData's size."""
         frac_length = int(frac * self.size)
         indices = np.random.permutation(self.size)
         indices_frac = indices[: frac_length]
@@ -91,7 +127,8 @@ class LabeledData:
                 LabeledData(self.X[indices_rest], self.y[indices_rest]))
 
     def k_split(self, k: int) -> List[Mask]:
-        """docstring"""
+        """Given a positive int k,
+           returns a list of k random Masks partitioning LabeledData."""
         assert 1 <= k <= self.size
         approx_fold_size = self.size // k
         indices = np.random.permutation(self.size)
@@ -103,13 +140,14 @@ class LabeledData:
         return [Mask(code=code, full_dim=self.size) for code in codes]
 
     def get_subset(self, mask: Mask) -> 'LabeledData':
-        """docstring"""
+        """Returns LabeledData corresponding to the subset of this LabeledData
+           designated by the given Mask."""
         marray = mask.get_array()
         return LabeledData(self.X[marray], self.y[marray])
 
 
 class Simulation(NamedTuple):
-    """docstring"""
+    """A linear predictor and simulated data."""
     target: LinearPredictor
     data: LabeledData
 
@@ -117,7 +155,9 @@ class Simulation(NamedTuple):
 def generate_target(feature_dim: int,
                     hot: int,
                     scale: float) -> LinearPredictor:
-    """docstring"""
+    """Returns a randomly generated LinearPredictor defined on a given number
+       of features, sensitive to only a given number of them, and having
+       entries within a given scale."""
     active = np.random.choice(feature_dim, hot, replace=False)
     random = np.random.uniform(-scale, scale, hot)
     target_col = np.zeros(feature_dim + 1)
@@ -127,14 +167,16 @@ def generate_target(feature_dim: int,
 
 
 def generate_X(feature_dim: int, cardinality: int, scale: float) -> np.array:
-    """docstring"""
+    """Generates cardinality feature vectors with feature_dim features,
+       each with absolute value bounded by given scale."""
     return np.random.uniform(-scale, scale, size=((cardinality, feature_dim)))
 
 
 def generate_label(target: LinearPredictor,
                    X: np.array,
                    scale: float) -> np.array:
-    """docstring"""
+    """Generates labels predicted by given LinearPredictor target for given
+       feature vectors X subject to random error controlled by given scale."""
     true = target.predict(X)
     error = np.random.normal(scale=scale, size=true.shape)
     return true + error
@@ -145,8 +187,9 @@ def simulate(feature_dim: int,
              target_scale: float,
              X_scale: float,
              error_scale: float) -> Simulation:
-    """docstring"""
-    hot = np.random.choice(feature_dim+1)
+    """Returns a Simulation with given number of features, data cardinality,
+       scale of LinearPredictor, scale of data, and scale of error in labels."""
+    hot = np.random.choice(feature_dim + 1)
     target = generate_target(feature_dim, hot, target_scale)
     X = generate_X(feature_dim, cardinality, X_scale)
     return Simulation(target,
