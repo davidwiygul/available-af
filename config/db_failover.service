@@ -1,0 +1,18 @@
+# db_failover.service
+
+[Unit]
+Description=Database failover monitoring daemon
+After=network.target 
+
+
+[Service]
+User=ubuntu
+Type=simple
+ExecStart=/bin/bash -c 'cd /home/ubuntu/db_failover; python3 monitor.py'
+Restart=on-failure
+RestartSec=5s
+PrivateTmp=True
+
+
+[Install]
+WantedBy=multi-user.target

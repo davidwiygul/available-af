@@ -1,0 +1,8 @@
+network:
+    version: 2
+    renderer: networkd
+    ethernets:
+        INTERFACE_NAME:
+            addresses:
+                - FIXED_IP/BITS
+                - FLOATING_IP/BITS

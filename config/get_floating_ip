@@ -1,0 +1,10 @@
+# get_floating_ip
+#!/bin/bash
+
+source provision.config
+
+BASE='http://169.254.169.254/latest/meta-data/network/interfaces/macs'
+URL="$BASE/$(./get_mac $1)/local-ipv4s"
+declare -a IPS=($(ssh -i $AWS_SSH_KEY ubuntu@$1 "curl -s $URL"))
+FLOATING_IP=${IPS[1]}
+echo $FLOATING_IP

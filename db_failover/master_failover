@@ -1,0 +1,6 @@
+# master_failover
+#!/bin/bash
+
+PGCONF=$(sudo -u postgres psql -A -t -c "show config_file;")
+sudo -u postgres sed -i "s|\(synchronous_standby_names\).*|\1 = ''|" $PGCONF
+sudo systemctl reload postgresql

@@ -1,0 +1,8 @@
+# get_region
+#!/bin/bash
+
+source provision.config
+
+URL='http://169.254.169.254/latest/dynamic/instance-identity/document'
+COMMAND="curl -s $URL | grep region | sed 's|.*: \"\(.*\)\".*|\1|'"
+echo $(ssh -i $AWS_SSH_KEY ubuntu@$1 "$COMMAND")

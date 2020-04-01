@@ -3,9 +3,12 @@
 
 source provision.config
 
+# configure postgres on master to synchronize to standby
 PRIVATE_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
 
 ssh -T -i $AWS_SSH_KEY ubuntu@$DB_PUBLIC << HERE
+    sudo -u postgres PGPASSWORD=$DB_PWD psql -h localhost -d $DATABASE -U $DB_USER -c 'create table db_failover_flag(flag boolean); insert into db_failover_flag (flag) values (FALSE);'
+
     HBA=\$(sudo -u postgres psql -A -t -c "show hba_file;")
     PGCONF=\$(sudo -u postgres psql -A -t -c "show config_file;")
 
@@ -29,16 +32,17 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$DB_PUBLIC << HERE
 HERE
 
 
+# set up EFS on standby
 ./efs $1
 
-
+# configure postgres on standby
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get update
     
     sudo apt-get install -y postgresql
 
     DATA=\$(sudo -u postgres psql -A -t -c "show data_directory;")
-
+    HBA=\$(sudo -u postgres psql -A -t -c "show hba_file;")
     PGCONF=\$(sudo -u postgres psql -A -t -c "show config_file;")
     
     sudo systemctl stop postgresql
@@ -53,7 +57,10 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
 
     sudo -u postgres sed -i "s|\(primary_conninfo = '\)\(.*\)|\1application_name=$DB_STANDBY_NAME \2|" \$DATA/recovery.conf
 
+    sudo sed -i '/# IPv4 local connections:/a host\t$DATABASE\t$DB_USER\t\tall\t\t\tmd5' \$HBA
+
     declare -A dict=(
+        [listen_addresses]="'*'"
         [hot_standby]=on
         [hot_standby_feedback]=on
         )
@@ -67,3 +74,36 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
 
     exit
 HERE
+
+# install aws cli on standby and assign a secondary private ip to master
+MASTER_REGION=$(./get_region $DB_PUBLIC)
+MASTER_ENI=$(./get_eni $DB_PUBLIC)
+ssh -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    sudo apt-get install -y awscli
+    aws ec2 --region $MASTER_REGION assign-private-ip-addresses --network-interface-id $MASTER_ENI --secondary-private-ip-address-count 1
+    exit
+HERE
+
+sleep 10
+
+# record floating IP assigned to master
+sed -i "s|^DB_IP.*|DB_IP='$(./get_floating_ip $DB_PUBLIC)'|" provision.config
+
+# configure master to accept floating IP
+./netplan $DB_PUBLIC
+ssh -i $AWS_SSH_KEY ubuntu@$DB_PUBLIC << HERE
+    sudo mv /home/ubuntu/$NETPLAN_YAML /etc/netplan/$NETPLAN_YAML
+    sudo netplan apply
+    exit
+HERE
+
+# prepare standby to accept floating IP if called to
+./netplan $1
+
+
+
+# install failover system on master
+./db_failover $DB_PUBLIC master $PRIVATE_IP
+
+# install failover system on standby
+./db_failover $1 standby $(./get_primary_ip $DB_PUBLIC)

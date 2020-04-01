@@ -1,0 +1,9 @@
+# get_eni
+#!/bin/bash
+
+source provision.config
+
+MAC=$(./get_mac $1)
+BASE="http://169.254.169.254/latest/meta-data/network/interfaces/macs"
+URL="$BASE/$MAC/interface-id"
+echo $(ssh -i $AWS_SSH_KEY ubuntu@$1 "curl -s $URL")

@@ -1,0 +1,6 @@
+# get_primary_ip
+#!/bin/bash
+
+source provision.config
+URL="http://169.254.169.254/latest/meta-data/local-ipv4"
+echo $(ssh -i $AWS_SSH_KEY ubuntu@$1 "curl -s $URL")

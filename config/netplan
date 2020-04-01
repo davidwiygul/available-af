@@ -1,0 +1,32 @@
+# netplan
+#! /bin/bash
+
+source provision.config
+
+scp -i $AWS_SSH_KEY ./$NETPLAN_YAML ubuntu@$1:/home/ubuntu/
+
+ssh -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    BASE='http://169.254.169.254/latest/meta-data'
+    MAC=\$(curl -s \$BASE/mac)
+    BASE="\$BASE/network/interfaces/macs/\$MAC"
+    declare -a IPS=(\$(curl -s \$BASE/local-ipv4s))
+    FIXED_IP=\${IPS[0]}
+    FLOATING_IP=$DB_IP
+    BITS=\$(curl -s \$BASE/subnet-ipv4-cidr-block | sed "s|.*/||")
+    INTERFACE_NAME=\$(route | grep default | awk '{print \$8}')
+
+    declare -A dict=(
+        [INTERFACE_NAME]=\$INTERFACE_NAME
+        [FIXED_IP]=\$FIXED_IP
+        [FLOATING_IP]=\$FLOATING_IP
+        [BITS]=\$BITS
+        )
+
+    for key in \${!dict[@]}
+        do
+            value=\${dict[\$key]}
+            sed -i "s|\$key|\$value|" /home/ubuntu/$NETPLAN_YAML
+        done
+
+    exit
+HERE
