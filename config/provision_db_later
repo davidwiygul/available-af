@@ -8,6 +8,10 @@
 # typically run immediately after provision_db_first
 # requires same variables from provision.config as provision_db_first
 #     in addition to DB_IP, DB_PUBLIC, and NETPLAN_YAML
+# unlike queue nodes, (multi)schedulers, and workers, database nodes
+#     in the current setup are limited to two in number,
+#     one master and one standby,
+#     so provision_db_later should be run only once (or not at all)
 
 #!/bin/bash
 
