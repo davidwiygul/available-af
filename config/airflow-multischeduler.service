@@ -1,4 +1,6 @@
 # airflow-multischeduler.service
+# systemd unit file for multischeduler
+# installed via daemonize script by provision_multischeduler
 
 [Unit]
 Description=Heirflow multischeduler daemon

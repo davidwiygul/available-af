@@ -1,4 +1,6 @@
 # riak.service
+# systemd riak unit file
+# installed via daemonize script by riak script
 
 [Unit]
 Description=Riak service

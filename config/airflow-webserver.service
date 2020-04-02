@@ -1,4 +1,6 @@
 # airflow-webserver.service
+# systemd webserver unit file
+# installed via daemonize script by provision_webserver
 
 [Unit]
 Description=Airflow webserver daemon

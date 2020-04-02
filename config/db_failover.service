@@ -1,4 +1,6 @@
 # db_failover.service
+# systemd db_failover monitor unit file
+# installed via daemonize script by config/db_failover
 
 [Unit]
 Description=Database failover monitoring daemon

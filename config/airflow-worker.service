@@ -1,4 +1,6 @@
 # airflow-worker.service
+# systemd worker unit file
+# installed via daemonize script by provision_worker
 
 [Unit]
 Description=Airflow worker daemon

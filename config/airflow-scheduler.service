@@ -1,4 +1,6 @@
 # airflow-scheduler.service
+# systemd scheduler unit file
+# installed via daemonize script by provision_scheduler
 
 [Unit]
 Description=Airflow scheduler daemon
