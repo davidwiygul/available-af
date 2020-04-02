@@ -1,4 +1,14 @@
 # provision_db_later
+# provision_db_later PUBLIC_IP
+# provisions standby postgres server,
+#     completes configuration of master for synchronous replication,
+#     installs failover system on master and standby,
+#     obtains floating (private) ip for db access,
+#     and records it in provision.config
+# typically run immediately after provision_db_first
+# requires same variables from provision.config as provision_db_first
+#     in addition to DB_IP, DB_PUBLIC, and NETPLAN_YAML
+
 #!/bin/bash
 
 source provision.config
@@ -99,8 +109,6 @@ HERE
 
 # prepare standby to accept floating IP if called to
 ./netplan $1
-
-
 
 # install failover system on master
 ./db_failover $DB_PUBLIC master $PRIVATE_IP
