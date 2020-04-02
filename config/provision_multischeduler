@@ -1,13 +1,22 @@
 # provision_multischeduler
+# provision_multischeduler PUBLIC_IP
+# installs Airflow and Heirflow multischeduler on given instance
+# assumes database and queues have been provisioned and necessary connection
+#     info set in provision.config (see array just below)
 #!/bin/bash
 
 source provision.config
 
 ssh -i $AWS_SSH_KEY ubuntu@$1 sudo apt-get update
+
+# enables EFS drive access so scheduler can see DAGs
 ./efs $1
+
+# installs Airflow and pika (so multischeduler can issue notifications)
 ./airflow $1
 ssh -i $AWS_SSH_KEY ubuntu@$1 python3 -m pip install pika
 
+# fills in multischeduler.ini
 declare -A dict=(
     [db_ip]=$DB_IP
     [database]=$DATABASE
@@ -24,6 +33,7 @@ for key in ${!dict[@]}; do
     sed -i "s|\(^$key\).*|\1 = $value|" ../heirflow/multischeduler.ini
 done
 
+# installs multischeduler as systemd service
 ssh -i $AWS_SSH_KEY ubuntu@$1 mkdir /home/ubuntu/multischeduler
 scp -i $AWS_SSH_KEY ../heirflow/multischeduler.py ubuntu@$1:/home/ubuntu/multischeduler/
 scp -i $AWS_SSH_KEY ../heirflow/multischeduler.ini ubuntu@$1:/home/ubuntu/multischeduler/
