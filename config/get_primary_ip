@@ -1,4 +1,7 @@
 # get_primary_ip
+# get_primary_ip PUBLIC_IP
+# prints primary private IP address of given instance
+
 #!/bin/bash
 
 source provision.config

@@ -1,4 +1,6 @@
 # get_mac
+# get_mac PUBLIC IP
+# prints MAC address of network interface of given instance
 #!/bin/bash
 
 source provision.config

@@ -1,4 +1,7 @@
 # get_floating_ip
+# get_floating_ip PUBLIC_IP
+# prints secondary IP (if any) assigned to given instance
+
 #!/bin/bash
 
 source provision.config

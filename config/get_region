@@ -1,4 +1,7 @@
 # get_region
+# get region PUBLIC_IP
+# prints AWS region of given instance
+
 #!/bin/bash
 
 source provision.config

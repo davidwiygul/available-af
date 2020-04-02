@@ -1,4 +1,7 @@
 # get_eni
+# get_eni PUBLIC_IP
+# prints AWS ENI id attached to given instance
+
 #!/bin/bash
 
 source provision.config
