@@ -1,8 +1,21 @@
 # provision_db_first
+# provision_db_first PUBLIC_IP
+# installs postgres server on given instance and configures for remote access
+# establishes user and password to be used by airflow and multischeduler
+# creates schedulers table to be used by heirflow multischeduler
+# records private and public IPs of server in provision.config
+# writes database connection data and ssh key path to heirflow/interface.ini
+# prepares database for synchronous replication,
+#     which is achieved by a subsequent application of provision_db_later,
+#     but this next step may be skipped if a standby db replica is not needed
+# assumes that in provision.config DB_ARCHIVE, DB_USER, DB_PWD, DATABASE,
+#     REP_USER, REP_PWD, EFS_IP, and EFS_PATH have been set
+
 #!/bin/bash
 
 source provision.config
 
+# mounts EFS drive and creates DB archive directory (if necessary) 
 ./efs $1
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     if [ ! -d $DB_ARCHIVE ]; then
@@ -12,6 +25,7 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     exit
 HERE
 
+# installs postgres, creates Airflow and replication accounts and Airflow DB
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get update
     
@@ -24,15 +38,19 @@ ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
         \q
 THERE
 
+# creates schedulers table to be used by Heirflow multischeduler
     sudo -u postgres PGPASSWORD=$DB_PWD psql -h localhost -d $DATABASE -U $DB_USER -c 'create table schedulers(ip varchar(15), birth timestamp, latest timestamp);'
 
+# locates the pg_hba.conf and postgresql.conf configuration files
     HBA=\$(sudo -u postgres psql -A -t -c "show hba_file;")
     PGCONF=\$(sudo -u postgres psql -A -t -c "show config_file;")
 
 #    sudo sed -i '/# IPv4 local connections:/a host\t$DATABASE\t$DB_USER\t\tsamenet\t\t\tmd5' \$HBA
 
+# allows remote connections to Airflow DB on Airflow account 
     sudo sed -i '/# IPv4 local connections:/a host\t$DATABASE\t$DB_USER\t\tall\t\t\tmd5' \$HBA
 
+# enable remote connections and archiving
     declare -A dict=(
         [listen_addresses]="'*'"
         [wal_level]=replica
@@ -53,12 +71,12 @@ THERE
     exit
 HERE
 
+# records private and public ips of master database server
 DB_IP=$(ssh -i $AWS_SSH_KEY ubuntu@$1 "hostname -I" | tr -d '[:space:]')
-
 sed -i "s|^DB_IP.*|DB_IP='$DB_IP'|" provision.config
-
 sed -i "s|^DB_PUBLIC.*|DB_PUBLIC='$1'|" provision.config
 
+# fill in interface.ini
 declare -A dict=( 
     [ssh_key]=$AWS_SSH_KEY
     [db_public_ip]=$1 
