@@ -1,4 +1,9 @@
 # monitor.py
+"""Daemon to monitor databases and trigger failover when needed.
+
+   Installed by config/db_failover.
+   Assumes db_failover_flag has been initialized by config/provision_db_later.
+   """
 
 import subprocess
 import time
@@ -8,7 +13,7 @@ import psycopg2
 
 from hfshared import Credentials, Database
 
-
+# The following connection parameters are set by config/db_failover.
 cred = Credentials('DB_USER', 'DB_PWD')
 partner_db = Database('PARTNER_IP', 'DB_NAME')
 local_db = Database('localhost', 'DB_NAME')
