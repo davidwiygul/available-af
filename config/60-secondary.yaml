@@ -1,3 +1,7 @@
+# 60-secondary.yaml
+# (on change of name update NETPLAN_YAML in provision.config)
+# yaml config file for netplan on db servers
+# written automatically by config/netplan
 network:
     version: 2
     renderer: networkd
