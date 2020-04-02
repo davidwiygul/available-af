@@ -1,15 +1,22 @@
 # airflow
+# airflow PUBLIC_IP_ADDRESS
+
+# installs and configures airflow on given instance
+# called by provision_webserver, provision_scheduler,
+#     provision_multischeduler, and provision_worker
+# refers to provision.config for various parameters
+# also installs psycopg2, required for Python Postgres support
+# Python Riak library is also installed,
+#     but this is need only for our particular demo
+
 #!/bin/bash
 
 
 source provision.config
 
-
 HEAD="pyamqp://$QUEUE_USER:$QUEUE_PWD@"
 TAIL=":5672/$QUEUE_HOST"
 BROKER_URL=$(echo $MQ_IP | sed "s|^|$HEAD|" | sed "s| |$HEAD|g" | sed "s|$|$TAIL|" | sed "s|,|$TAIL\\\;|g")
-
-echo $BROKER_URL
 
 ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
     sudo apt-get install -y python3-pip
