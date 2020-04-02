@@ -5,6 +5,8 @@
 # called by provision_webserver, provision_scheduler,
 #     provision_multischeduler, and provision_worker
 # refers to provision.config for various parameters
+# in particular assumes that QUEUE_USER, QUEUE_PWD, QUEUE_HOST, DB_USER,
+#     DB_PWD, DATABASE, Q_IP, and DB_IP have been set
 # also installs psycopg2, required for Python Postgres support
 # Python Riak library is also installed,
 #     but this is need only for our particular demo
