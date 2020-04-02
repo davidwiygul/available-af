@@ -1,4 +1,10 @@
 # efs
+# efs PUBLIC_IP
+# mounts EFS drive on given instance (and sets to mount at boot)
+# assumes EFS_IP and EFS_PATH have been set in provision.config
+# probably AWS EFS could be replaced with any NFS service
+#     (possibly with minor modifications)
+
 #!/bin/bash
 
 source provision.config
