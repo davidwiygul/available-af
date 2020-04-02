@@ -1,4 +1,8 @@
 # demo
+# demo PUBLIC_IP
+# assumes that in provision.config EFS_IP and EFS_PATH have been set
+# mounts EFS on given instance and transfers demo dag and supporting files
+
 #!/bin/bash
 
 source provision.config
