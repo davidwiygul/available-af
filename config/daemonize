@@ -1,4 +1,7 @@
 # daemonize
+# daemonize UNIT_FILE PUBLIC_IP
+# installs given systemd unit file on given instance 
+
 #!/bin/bash
 
 source provision.config
