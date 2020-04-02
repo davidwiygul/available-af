@@ -1,0 +1,62 @@
+# db_failover
+# db_failover PUBLIC_IP [master|standby] PARTNER_PRIVATE_IP
+# installs and configures specified (master or standby) failover scripts
+#     on specified instance having specified partner (standby or master)
+
+#!/bin/bash
+
+source provision.config
+
+# create failover directory on instance and transfer necessary files
+ssh -i $AWS_SSH_KEY ubuntu@$1 "mkdir db_failover"
+scp -i $AWS_SSH_KEY ../db_failover/$2_failover ubuntu@$1:/home/ubuntu/db_failover/failover
+scp -i $AWS_SSH_KEY ../db_failover/monitor.py ubuntu@$1:/home/ubuntu/db_failover/
+scp -i $AWS_SSH_KEY ../heirflow/hfshared.py ubuntu@$1:/home/ubuntu/db_failover/
+
+# make failover script executable
+# fill in db connection parameters in monitor.py
+# install psycopg2 and pika (since both are needed by hfshared module)
+ssh -i $AWS_SSH_KEY ubuntu@$1 << HERE
+    chmod 700 /home/ubuntu/db_failover/failover
+    declare -A dict=(
+        [DB_USER]=$DB_USER
+        [DB_PWD]=$DB_PWD
+        [DB_NAME]=$DATABASE
+        [PARTNER_IP]=$3
+        )
+
+    for key in \${!dict[@]}
+    do
+        value=\${dict[\$key]}
+        sed -i "s|\$key|\$value|" /home/ubuntu/db_failover/monitor.py
+    done
+
+    sudo apt-get install -y python3-pip
+    python3 -m pip install psycopg2-binary
+    python3 -m pip install pika
+    exit
+HERE
+
+# in the standby case prepare the failover script
+# (no such steps are required for the simpler failover script on master)
+if [ $2 = 'standby' ]
+then
+    declare -A dict=(
+        [NETPLAN_YAML]=$NETPLAN_YAML
+        [FLOATING_IP]=$DB_IP
+        [STANDBY_ENI]=$(./get_eni $1)
+        [MASTER_ENI]=$(./get_eni $DB_PUBLIC)
+        [STANDBY_REGION]=$(./get_region $1)
+        [MASTER_REGION]=$(./get_region $DB_PUBLIC)
+        )
+
+    for key in ${!dict[@]}
+    do
+        value=${dict[$key]}
+        ssh -i $AWS_SSH_KEY ubuntu@$1 "sed -i \"s|\(^$key=\).*|\1'$value'|\" /home/ubuntu/db_failover/failover"
+    done
+
+fi
+
+# install the monitor script as a systemd service
+./daemonize db_failover $1
