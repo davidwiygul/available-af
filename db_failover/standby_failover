@@ -1,4 +1,6 @@
 # standby_failover
+# DB failover script to promote standby to master and reassign floating IP
+
 #!/bin/bash
 
 # the following are set by config/provision_db_later
