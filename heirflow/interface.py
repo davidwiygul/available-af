@@ -38,6 +38,10 @@ The program also supports the following commands.
 
 Connection data for the database and queue are imported from interface.ini.
 
+Security group settings (or the equivalent) must permit the computer running
+the interface to access the database and queue servers and (to start and stop
+multischeduler service remotely) to SSH into each multischeduler instance.
+
 It might also be useful to implement block and unblock commands, which could
 modify ip tables on the database and queue, but such functionality is not yet
 available (and would require knowledge of the affected multischeduler's
