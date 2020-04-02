@@ -2,7 +2,8 @@
 # netplan PUBLIC_IP
 # transfers netplan yaml template to ubuntu user's home directory on given
 #     instance and fills in appropriate values
-# assumes DB_IP in provision.config has been set to DB floating IP
+# assumes that in provision.config NETPLAN_YAML has been set
+#     and DB_IP has been set to DB floating IP
 #     (as done by provision_db_later before it calls netplan)
 
 #! /bin/bash
