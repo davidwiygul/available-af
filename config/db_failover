@@ -2,6 +2,9 @@
 # db_failover PUBLIC_IP [master|standby] PARTNER_PRIVATE_IP
 # installs and configures specified (master or standby) failover scripts
 #     on specified instance having specified partner (standby or master)
+# called by provision_db_later
+# assumes that in provision.config DB_USER, DB_PWD, DATABASE,
+#     DB_IP, DB_PUBLIC, and NETPLAN_YAML have been set
 
 #!/bin/bash
 
