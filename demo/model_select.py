@@ -1,5 +1,5 @@
 # model_select.py
-"""docstring"""
+"""Model selection DAG and supporting functions."""
 
 from datetime import datetime
 from datetime import timedelta
@@ -10,7 +10,7 @@ from airflow.operators.python_operator import PythonOperator
 import ml
 from riak_python_object_bucket import RiakPythonObjectBucket
 
-
+# constants at user's disposal
 FEATURE_DIM = 4
 CARDINALITY = 100
 TARGET_SCALE = 10
@@ -20,7 +20,7 @@ K = 5
 
 
 def simulate() -> None:
-    """docstring"""
+    """Creates and stores ml.Simulation along with test/train split."""
     simulation = ml.simulate(feature_dim=FEATURE_DIM,
                              cardinality=CARDINALITY,
                              target_scale=TARGET_SCALE,
@@ -34,7 +34,7 @@ def simulate() -> None:
 
 
 def fold_split() -> None:
-    """docstring"""
+    """Creates and stores cross validation folds."""
     data = RiakPythonObjectBucket('data')
     folds = RiakPythonObjectBucket('folds')
     for index, fold in enumerate(data.get('train').k_split(K)):
@@ -42,7 +42,7 @@ def fold_split() -> None:
 
 
 def train_model(model_index: int, fold_index: int) -> None:
-    """docstring"""
+    """Trains given model on complement of given fold and stores predictor."""
     model = ml.Mask(code=model_index, full_dim=FEATURE_DIM)
     fold = RiakPythonObjectBucket('folds').get(str(fold_index))
     train = RiakPythonObjectBucket('data').get('train')
@@ -53,7 +53,7 @@ def train_model(model_index: int, fold_index: int) -> None:
 
 
 def evaluate_error(model_index: int, fold_index: int) -> None:
-    """docstring"""
+    """Evaluates and stores error of given trained model on given fold."""
     fold = RiakPythonObjectBucket('folds').get(str(fold_index))
     train = RiakPythonObjectBucket('data').get('train')
     predictors = RiakPythonObjectBucket('predictors')
@@ -64,7 +64,7 @@ def evaluate_error(model_index: int, fold_index: int) -> None:
 
 
 def average_error(model_index: int) -> None:
-    """docstring"""
+    """Calculates and stores fold average of error made by given model."""
     errors = RiakPythonObjectBucket('errors')
     error_averages = RiakPythonObjectBucket('error_averages')
     avg_error = sum(errors.get(f"model {model_index}, fold {fold_index}")
@@ -73,7 +73,7 @@ def average_error(model_index: int) -> None:
 
 
 def minimize() -> None:
-    """docstring"""
+    """Finds and stores model minimizing average error over all folds."""
     error_averages = RiakPythonObjectBucket('error_averages')
     min_model_index = 0
     for model_index in range(2**FEATURE_DIM):
@@ -86,7 +86,7 @@ def minimize() -> None:
 
 
 def train_min() -> None:
-    """docstring"""
+    """Trains minimizing model on entire training set and stores predictor."""
     report = RiakPythonObjectBucket('report')
     train = RiakPythonObjectBucket('data').get('train')
     predictor = ml.LinearPredictor()
@@ -95,7 +95,7 @@ def train_min() -> None:
 
 
 def report_error() -> None:
-    """docstring"""
+    """Computes and stores error made by trained minimizer on test set."""
     report = RiakPythonObjectBucket('report')
     predictor = report.get('predictor')
     test = RiakPythonObjectBucket('data').get('test')
@@ -105,7 +105,7 @@ def report_error() -> None:
 
 default_args = {'owner': 'airflow',
                 'depends_on_past': False,
-                'start_date': datetime(2020, 3, 2),
+                'start_date': datetime(2020, 3, 22),
                 'email_on_failure': False,
                 'email_on_retry': False,
                 'retries': 10,
