@@ -1,0 +1,12 @@
+This folders contains scripts and configuration files to install and configure
+      various services on EC2 instances.
+It is assumed that all instances are running Ubuntu 18.04 and that security
+    group settings permit all necessary traffic between instances as well as
+    SSH access from the computer running the scripts.
+
+Most scripts require at least that AWS_SSH_KEY be set in
+provision.config.
+
+The scripts provide detailed documentation of the installation process
+(and of course you should be reviewed and possibly adjusted before being run!), which should be straightforward to adapt to a different Linux distribution or
+even cloud platform.
