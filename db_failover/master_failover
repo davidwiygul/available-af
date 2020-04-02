@@ -1,4 +1,6 @@
 # master_failover
+# DB failover script to disable synchronization should standby fail
+
 #!/bin/bash
 
 PGCONF=$(sudo -u postgres psql -A -t -c "show config_file;")
