@@ -1,4 +1,8 @@
 # riak_later
+# riak_later PUBLIC_IP
+# runs riak script on given instance and joins new node to existing cluster
+# typically called by provision_worker_later
+# see riak script for requirements
 #!/bin/bash
 
 source provision.config
