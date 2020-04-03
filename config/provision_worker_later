@@ -1,4 +1,10 @@
 # provision_worker_later
+# provision_worker_later PUBLIC_IP
+# installs riak and airflow worker service on given instance
+#     and joins instance to existing riak cluster
+# see called scripts for requirements
+# typically run immediately after provision_worker_first
+
 #!/bin/bash
 
 ./riak_later $1
