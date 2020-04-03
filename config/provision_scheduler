@@ -1,4 +1,13 @@
 # provision_scheduler
+# provision_scheduler PUBLIC_IP
+# installs Airflow on given instance and enables and starts
+#     the Airflow scheduler (not Heirflow multischeduler)
+#     as a systemd service
+# makes the same assumptions as efs and airflow scripts
+# typically run soon after all queue nodes (1 or more)
+#     and database nodes (1 or 2) have been provisioned,
+#     if you prefer to use the classic Airflow scheduler (on a single node)
+
 #!/bin/bash
 
 source provision.config
