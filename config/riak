@@ -1,4 +1,8 @@
 # riak
+# riak PUBLIC_IP
+# installs and configures riak as a systemd service on given instance
+# typically called by provision_worker_first or provision_worker_later
+
 #!/bin/bash
 
 source provision.config
