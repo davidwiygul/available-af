@@ -8,6 +8,9 @@
 # typically run immediately after provision_db_first
 # requires same variables from provision.config as provision_db_first
 #     in addition to DB_IP, DB_PUBLIC, and NETPLAN_YAML
+# the instance on which this is run must be assigned an IAM role
+#     permitting it to assign and unassign private IPs on itself
+#     and on the db master
 # unlike queue nodes, (multi)schedulers, and workers, database nodes
 #     in the current setup are limited to two in number,
 #     one master and one standby,
