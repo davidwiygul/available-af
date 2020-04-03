@@ -1,4 +1,10 @@
 # provision_worker
+# provision_worker PUBLIC_IP
+# installs Airflow on given instance and enables and starts
+#     the Airflow worker process as a systemd service
+# has the same requirements as efs and airflow scripts
+# typically called by provision_worker_first and provision_worker_later
+
 #!/bin/bash
 
 source provision.config
