@@ -1,4 +1,15 @@
 # provision_q_first
+# provision_q_first PUBLIC_IP
+# installs RabbitMQ server on given instance,
+#     records instance's private IP in provision.config as MQ_IP,
+#     downloads server's .erlang.cookie (for future mirroring)
+#     and writes queue connection data to interface.ini
+# assumes that the following variables have been set in provision.config:
+#     QUEUE_USER, QUEUE_PWD, QUEUE_HOST,
+#     NEWS_QUEUE_USER, NEWS_QUEUE_PWD, and NEWS_QUEUE_VHOST
+# can (but need not) be followed by provision_q_later on another instance
+
+
 #!/bin/bash
 
 source provision.config
