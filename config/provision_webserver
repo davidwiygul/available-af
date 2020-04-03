@@ -1,13 +1,14 @@
 # provision_webserver
+# provision_webserver PUBLIC_IP
+# installs Airflow on the given instance and enables and starts
+# the Airflow webserver as a systemd service
+# (make sure that security group (or equivalent) settings permit
+#    access to the Airflow web UI on this instance)
+# has the same requirements as the efs and airflow scripts
+
 #!/bin/bash
 
 source provision.config
-
-ssh -T -i $AWS_SSH_KEY ubuntu@$1 << HERE
-    sudo apt-get update
-    sudo apt-get install -y postgresql-client
-    exit
-HERE
 
 ./efs $1
 ./airflow $1
