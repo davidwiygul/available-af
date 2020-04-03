@@ -8,5 +8,6 @@ Most scripts require at least that AWS_SSH_KEY be set in
 provision.config.
 
 The scripts provide detailed documentation of the installation process
-(and of course you should be reviewed and possibly adjusted before being run!), which should be straightforward to adapt to a different Linux distribution or
+(and of course you should be reviewed and possibly adjusted before being run!),
+which should be straightforward to adapt to a different Linux distribution or
 even cloud platform.
