@@ -1,4 +1,9 @@
 # provision_worker_first
+# provision_worker_first PUBLIC_IP
+# installs riak and Airflow worker service on first worker node
+# typically called soon after queue and database have been provisioned
+# see called scripts for more detailed requirements
+
 #!/bin/bash
 
 ./riak_first $1
