@@ -1,4 +1,9 @@
 # riak_first
+# runs riak script on given instance
+#     and stores node's public and private ips to provision.config
+# typically run soon after database and queue clusters are provisioned
+# see riak script for requirements
+
 #!/bin/bash
 
 source provision.config
