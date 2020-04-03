@@ -3,6 +3,8 @@
 # installs Airflow and Heirflow multischeduler on given instance
 # assumes database and queues have been provisioned and necessary connection
 #     info set in provision.config (see array just below)
+# assumes EFS fields have been set in provision.config
+# can be run on any number of nodes
 #!/bin/bash
 
 source provision.config
