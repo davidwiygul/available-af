@@ -1,4 +1,13 @@
 # provision_q_later
+# provision_q_later PUBLIC_IP
+# installs RabbitMQ on given instance,
+#     joins this new node to cluster represented by first entry
+#         of MQ_IP in provision.config, with mirroring of QUEUE_HOST queues
+#     adds private ip of given instance to MQ_IP and to interface.ini
+# assumes MQ_IP and QUEUE_HOST have been set in provision.config
+# typically run immediately after provision_q_first or provision_q_later
+# can be run on arbitrarily many instances
+
 #!/bin/bash
 
 source provision.config
