@@ -50,7 +50,7 @@ with built-in promotion of a new master as needed.
 		  
 Achieving scheduler redundancy is a slightly more delicate challenge,
 since (at least at time of writing) simply running multiple schedulers
-simultaneously introduces the danger of a single task more than once,
+simultaneously introduces the danger of scheduling a single task more than once,
 which, at worst (if the tasks are not idempotent) can lead to incorrect
 results and at best wastes resources. To address this difficulty
 Heirflow takes advantage of the metadata store already present
