@@ -134,7 +134,7 @@ a three-node RabbitMQ cluster,
 a two-node scheduler cluster,
 a four-node worker cluster,
 and a single Airflow UI webserver.
-It shouldn't be hard to adapt these insructors to play with these
+It shouldn't be hard to adapt these instructions to play with these
 numbers, with the only firm design restriction being that,
 at present, the database cluster must consist of either one or two nodes.
 
