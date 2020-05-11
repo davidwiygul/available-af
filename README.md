@@ -63,7 +63,7 @@ scheduling tasks; should it go down, the other schedulers learn of its
 demise through the database, and the "oldest" (that is first to register
 with the database) available scheduler is universally recognized as the
 "heir" and will seamlessly take over scheduling.
-In this scheme, if desired, schedulers can added or removed
+In this scheme, if desired, schedulers can be added or removed
 on the fly, without requiring any configuration
 or interrupting workflows.
 
